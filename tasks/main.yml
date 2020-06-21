@@ -1,0 +1,51 @@
+---
+# tasks file for ansible-role-dovecot
+- name: Install packages
+  package:
+    name: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+    - dovecot-imapd
+    - dovecot-mysql
+    - dovecot-managesieved
+    - dovecot-sieve
+
+- name: Copy Dovecot configuration files
+  copy: 
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner }}" 
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+    backup: yes
+  with_items:
+    - { src: dovecot.conf, dest: /etc/dovecot/dovecot.conf, owner: root, group: root, mode: "0644" }
+    - { src: 10-auth.conf, dest: /etc/dovecot/conf.d/10-auth.conf, owner: root, group: 0, mode: "0644" }
+    - { src: 10-mail.conf, dest: /etc/dovecot/conf.d/10-mail.conf, owner: root, group: 0, mode: "0644" }
+    - { src: 10-master.conf, dest: /etc/dovecot/conf.d/10-master.conf, owner: root, group: 0, mode: "0644" }
+    - { src: 20-imap.conf, dest: /etc/dovecot/conf.d/20-imap.conf, owner: root, group: 0, mode: "0644" }
+    - { src: 20-managesieve.conf, dest: /etc/dovecot/conf.d/20-managesieve.conf, owner: root, group: 0, mode: "0644" }
+    - { src: 90-sieve.conf, dest: /etc/dovecot/conf.d/90-sieve.conf, owner: root, group: 0, mode: "0644" }
+
+- name: Copy Dovecot template configuration
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}" 
+    owner: "{{ item.owner }}" 
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+    backup: yes
+  with_items:
+    - { src: dovecot-sql.conf.ext, dest: /etc/dovecot/dovecot-sql.conf.ext, owner: root, group: root, mode: "0600" }
+    - { src: 15-lda.conf, dest: /etc/dovecot/conf.d/15-lda.conf, owner: root, group: 0, mode: "0644" }
+    - { src: 10-ssl.conf, dest: /etc/dovecot/conf.d/10-ssl.conf, owner: root, group: 0, mode: "0644" }
+  notify:
+    - restart dovecot  
+    
+- name: Create a job to reload dovecot
+  cron:
+    name: "Reload dovecot"
+    hour: "2"
+    user: root
+    job: "/usr/sbin/service dovecot reload"
